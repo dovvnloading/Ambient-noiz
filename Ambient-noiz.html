@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sleep Sounds - Advanced Noise Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0c0c0c 0%, #1a1a1a 50%, #0f0f0f 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(26, 26, 26, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(64, 64, 64, 0.3);
+            border-radius: 24px;
+            padding: 40px;
+            max-width: 420px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .title {
+            font-size: 2rem;
+            font-weight: 300;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #ffffff 0%, #cccccc 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            font-size: 0.9rem;
+            color: #888888;
+            margin-bottom: 30px;
+            font-weight: 300;
+        }
+
+        .visualizer {
+            width: 100%;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            margin: 20px 0;
+            position: relative;
+            overflow: hidden;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.4s ease, visibility 0.4s ease;
+        }
+
+        .visualizer.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .wave {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(74, 144, 226, 0.3), transparent);
+            animation: wave 2s infinite ease-in-out;
+        }
+
+        @keyframes wave {
+            0%, 100% { transform: translateX(-100%); }
+            50% { transform: translateX(100%); }
+        }
+
+        .play-button {
+            background: linear-gradient(135deg, #2d2d2d 0%, #404040 100%);
+            border: 2px solid #404040;
+            border-radius: 20px;
+            color: #ffffff;
+            font-size: 1.1rem;
+            font-weight: 500;
+            padding: 16px 32px;
+            margin: 20px 0 10px 0;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            outline: none;
+            min-width: 140px;
+        }
+
+        .play-button:hover {
+            background: linear-gradient(135deg, #3d3d3d 0%, #505050 100%);
+            border-color: #505050;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .play-button:active {
+            transform: translateY(0);
+        }
+
+        .play-button.playing {
+            background: linear-gradient(135deg, #4a90e2 0%, #5aa0f2 100%);
+            border-color: #5aa0f2;
+            box-shadow: 0 0 20px rgba(74, 144, 226, 0.3);
+        }
+
+        .controls-section {
+            margin: 25px 0;
+            text-align: left;
+        }
+
+        .control-label {
+            font-size: 0.85rem;
+            color: #cccccc;
+            margin-bottom: 15px;
+            font-weight: 400;
+            display: block;
+        }
+
+        .control-row {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .slider {
+            flex: 1;
+            height: 6px;
+            background: #404040;
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+            position: relative;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #4a90e2;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .slider::-webkit-slider-thumb:hover {
+            background: #5aa0f2;
+            transform: scale(1.1);
+        }
+
+        .slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: #4a90e2;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+        }
+
+        .control-value {
+            color: #4a90e2;
+            font-weight: 500;
+            font-size: 0.9rem;
+            min-width: 50px;
+            text-align: right;
+        }
+
+        .noise-types {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        .noise-type-button {
+            background: #2d2d2d;
+            border: 1px solid #404040;
+            color: #cccccc;
+            border-radius: 12px;
+            padding: 10px 18px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+        }
+
+        .noise-type-button:hover {
+            background: #3d3d3d;
+            border-color: #505050;
+        }
+
+        .noise-type-button.active {
+            background: #4a90e2;
+            border-color: #5aa0f2;
+            color: white;
+            box-shadow: 0 0 15px rgba(74, 144, 226, 0.2);
+        }
+
+        .status {
+            font-size: 0.8rem;
+            color: #888888;
+            font-style: italic;
+            margin-top: 20px;
+            transition: color 0.3s ease;
+        }
+
+        .status.playing { color: #4a90e2; }
+        .status.error { color: #e74c3c; }
+
+        @media (max-width: 480px) {
+            .container { padding: 30px 20px; margin: 10px; }
+            .title { font-size: 1.6rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">Sleep Sounds</h1>
+        <p class="subtitle">Advanced Noise Generator</p>
+
+        <div class="noise-types">
+            <button class="noise-type-button active" data-type="white">White</button>
+            <button class="noise-type-button" data-type="pink">Pink</button>
+            <button class="noise-type-button" data-type="brown">Brown</button>
+        </div>
+
+        <div class="visualizer" id="visualizer">
+            <div class="wave"></div>
+        </div>
+        
+        <button class="play-button" id="playButton">▶ Start</button>
+
+        <div class="controls-section">
+            <div class="control-group">
+                <label class="control-label">Volume</label>
+                <div class="control-row">
+                    <input type="range" class="slider" id="volumeSlider" min="0" max="100" value="30">
+                    <span class="control-value" id="volumeValue">30%</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls-section" style="margin-top: -10px;">
+             <div class="control-group">
+                <label class="control-label">Tone (Softer Sound)</label>
+                <div class="control-row">
+                    <input type="range" class="slider" id="toneSlider" min="400" max="20000" value="20000" step="100">
+                    <span class="control-value" id="toneValue">Bright</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="status" id="status">Ready</div>
+    </div>
+
+    <script>
+        class NoiseGenerator {
+            constructor() {
+                this.audioContext = null;
+                this.gainNode = null;
+                this.filterNode = null;
+                this.activeNoiseSource = null;
+                this.noiseType = 'white';
+                this.isPlaying = false;
+                this.volume = 0.3;
+            }
+
+            async init() {
+                try {
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    
+                    this.gainNode = this.audioContext.createGain();
+                    this.gainNode.gain.value = this.volume;
+                    
+                    this.filterNode = this.audioContext.createBiquadFilter();
+                    this.filterNode.type = 'lowpass';
+                    this.filterNode.frequency.value = 20000;
+
+                    this.filterNode.connect(this.gainNode).connect(this.audioContext.destination);
+                    
+                    return true;
+                } catch (error) {
+                    console.error('Audio initialization failed:', error);
+                    return false;
+                }
+            }
+
+            createNoiseSource() {
+                const bufferSize = this.audioContext.sampleRate * 2; // 2-second buffer
+                const buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
+                const data = buffer.getChannelData(0);
+
+                if (this.noiseType === 'white') {
+                    for (let i = 0; i < bufferSize; i++) {
+                        data[i] = Math.random() * 2 - 1;
+                    }
+                } else if (this.noiseType === 'pink') {
+                    let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+                    for (let i = 0; i < bufferSize; i++) {
+                        const white = Math.random() * 2 - 1;
+                        b0 = 0.99886 * b0 + white * 0.0555179;
+                        b1 = 0.99332 * b1 + white * 0.0750759;
+                        b2 = 0.96900 * b2 + white * 0.1538520;
+                        b3 = 0.86650 * b3 + white * 0.3104856;
+                        b4 = 0.55000 * b4 + white * 0.5329522;
+                        b5 = -0.7616 * b5 - white * 0.0168980;
+                        data[i] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362;
+                        data[i] *= 0.11; 
+                        b6 = white * 0.115926;
+                    }
+                } else if (this.noiseType === 'brown') {
+                    let lastOut = 0.0;
+                    for (let i = 0; i < bufferSize; i++) {
+                        const white = Math.random() * 2 - 1;
+                        data[i] = (lastOut + (0.02 * white)) / 1.02;
+                        lastOut = data[i];
+                        data[i] *= 3.5; // Rescale to make it audible
+                    }
+                }
+
+                const source = this.audioContext.createBufferSource();
+                source.buffer = buffer;
+                source.loop = true;
+                return source;
+            }
+            
+            async start() {
+                if (!this.audioContext) {
+                    const initialized = await this.init();
+                    if (!initialized) return false;
+                }
+                
+                if (this.audioContext.state === 'suspended') {
+                    await this.audioContext.resume();
+                }
+
+                if (this.activeNoiseSource) {
+                    this.activeNoiseSource.stop();
+                }
+
+                this.activeNoiseSource = this.createNoiseSource();
+                this.activeNoiseSource.connect(this.filterNode);
+                this.activeNoiseSource.start();
+                this.isPlaying = true;
+                return true;
+            }
+
+            stop() {
+                if (this.activeNoiseSource) {
+                    this.activeNoiseSource.stop();
+                    this.activeNoiseSource = null;
+                }
+                this.isPlaying = false;
+            }
+
+            setVolume(volume) {
+                this.volume = volume;
+                if (this.gainNode) {
+                    this.gainNode.gain.setValueAtTime(volume, this.audioContext.currentTime);
+                }
+            }
+
+            setNoiseType(type) {
+                this.noiseType = type;
+                if (this.isPlaying) {
+                    this.start();
+                }
+            }
+            
+            setTone(frequency) {
+                if (this.filterNode) {
+                    this.filterNode.frequency.setValueAtTime(frequency, this.audioContext.currentTime);
+                }
+            }
+        }
+
+        // --- App Initialization ---
+        const noiseGenerator = new NoiseGenerator();
+        const playButton = document.getElementById('playButton');
+        const volumeSlider = document.getElementById('volumeSlider');
+        const volumeValue = document.getElementById('volumeValue');
+        const toneSlider = document.getElementById('toneSlider');
+        const toneValue = document.getElementById('toneValue');
+        const status = document.getElementById('status');
+        const visualizer = document.getElementById('visualizer');
+        const noiseTypeButtons = document.querySelectorAll('.noise-type-button');
+
+        // Play/Stop button handler
+        playButton.addEventListener('click', async () => {
+            if (!noiseGenerator.isPlaying) {
+                const success = await noiseGenerator.start();
+                if (success) {
+                    playButton.textContent = '⏸ Stop';
+                    playButton.classList.add('playing');
+                    status.textContent = 'Playing...';
+                    status.className = 'status playing';
+                    visualizer.classList.add('active');
+                } else {
+                    status.textContent = 'Failed to start audio';
+                    status.className = 'status error';
+                }
+            } else {
+                noiseGenerator.stop();
+                playButton.textContent = '▶ Start';
+                playButton.classList.remove('playing');
+                status.textContent = 'Stopped';
+                status.className = 'status';
+                visualizer.classList.remove('active');
+            }
+        });
+
+        // Volume control
+        volumeSlider.addEventListener('input', (e) => {
+            const volume = parseInt(e.target.value);
+            volumeValue.textContent = `${volume}%`;
+            noiseGenerator.setVolume(volume / 100);
+        });
+
+        // Tone control
+        toneSlider.addEventListener('input', (e) => {
+            const freq = parseInt(e.target.value);
+            noiseGenerator.setTone(freq);
+            if (freq > 19000) {
+                 toneValue.textContent = 'Bright';
+            } else {
+                 toneValue.textContent = `${Math.round(freq / 1000)} kHz`;
+            }
+        });
+
+        // Noise Type selection
+        noiseTypeButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                noiseTypeButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                const type = button.dataset.type;
+                noiseGenerator.setNoiseType(type);
+            });
+        });
+
+        // Initialize default values
+        noiseGenerator.setVolume(parseInt(volumeSlider.value) / 100);
+        noiseGenerator.setTone(parseInt(toneSlider.value));
+
+    </script>
+</body>
+</html>
