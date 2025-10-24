@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sleep Sounds Studio - Advanced Noise Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: radial-gradient(circle at top right, rgba(74, 144, 226, 0.15), transparent 45%),
+                        radial-gradient(circle at bottom left, rgba(255, 255, 255, 0.05), transparent 50%),
+                        linear-gradient(135deg, #050505 0%, #151515 55%, #050505 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 40px 20px;
+        }
+
+        .container {
+            background: rgba(26, 26, 26, 0.92);
+            backdrop-filter: blur(24px);
+            border: 1px solid rgba(64, 64, 64, 0.4);
+            border-radius: 28px;
+            padding: 48px 52px;
+            max-width: 1080px;
+            width: 100%;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.65);
+            display: flex;
+            flex-direction: column;
+            gap: 48px;
+        }
+
+        header {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .title {
+            font-size: 2.2rem;
+            font-weight: 300;
+            background: linear-gradient(135deg, #ffffff 0%, #c9d8ff 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .subtitle {
+            font-size: 1rem;
+            color: #aaaaaa;
+            font-weight: 300;
+            letter-spacing: 0.03em;
+        }
+
+        .description {
+            font-size: 0.92rem;
+            color: #8a8a8a;
+            max-width: 620px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .layout-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 340px) minmax(0, 1fr);
+            gap: 32px;
+            align-items: start;
+            grid-template-areas: 
+                "playback noise"
+                "motion timer"
+                "presets presets";
+        }
+
+        .panel {
+            background: rgba(12, 12, 12, 0.65);
+            border: 1px solid rgba(90, 90, 90, 0.3);
+            border-radius: 22px;
+            padding: 28px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02), 0 15px 40px rgba(0, 0, 0, 0.45);
+        }
+
+        .playback-panel { grid-area: playback; }
+        .motion-panel { grid-area: motion; }
+        .noise-panel { grid-area: noise; }
+        .timer-panel { grid-area: timer; }
+        .presets-panel { grid-area: presets; }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            color: #d7d7d7;
+        }
+
+        .visualizer {
+            width: 100%;
+            height: 70px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(74, 144, 226, 0.1));
+            border-radius: 16px;
+            position: relative;
+            overflow: hidden;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.4s ease, visibility 0.4s ease;
+            margin: 20px 0;
+        }
+
+        .visualizer.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .wave {
+            position: absolute;
+            width: 120%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(74, 144, 226, 0.35), transparent);
+            animation: wave 2.4s infinite ease-in-out;
+        }
+
+        @keyframes wave {
+            0%, 100% { transform: translateX(-110%); }
+            50% { transform: translateX(110%); }
+        }
+
+        .play-button {
+            background: linear-gradient(135deg, #2d2d2d 0%, #404040 100%);
+            border: 2px solid rgba(74, 144, 226, 0.15);
+            border-radius: 24px;
+            color: #ffffff;
+            font-size: 1.1rem;
+            font-weight: 600;
+            padding: 18px 34px;
+            margin: 20px 0 10px 0;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            outline: none;
+            letter-spacing: 0.03em;
+            align-self: center;
+        }
+
+        .play-button:hover {
+            background: linear-gradient(135deg, #3d3d3d 0%, #505050 100%);
+            border-color: rgba(80, 130, 210, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .play-button.playing {
+            background: linear-gradient(135deg, #4a90e2 0%, #5aa0f2 100%);
+            border-color: rgba(90, 140, 220, 0.9);
+            box-shadow: 0 0 25px rgba(74, 144, 226, 0.35);
+        }
+
+        .status {
+            font-size: 0.82rem;
+            color: #888888;
+            font-style: italic;
+            margin-top: 20px;
+            transition: color 0.3s ease;
+            text-align: center;
+        }
+
+        .status.playing { color: #4a90e2; }
+        .status.error { color: #e74c3c; }
+
+        .controls-section {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            text-align: left;
+        }
+
+        .control-label {
+            font-size: 0.9rem;
+            color: #cccccc;
+            font-weight: 500;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .inline-value {
+            color: #4a90e2;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .control-row {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            width: 100%;
+        }
+
+        .slider {
+            flex: 1;
+            height: 6px;
+            background: #404040;
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #4a90e2;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .slider::-webkit-slider-thumb:hover {
+            background: #5aa0f2;
+            transform: scale(1.1);
+        }
+
+        .slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: #4a90e2;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+        }
+
+        .control-hint {
+            font-size: 0.72rem;
+            color: #6a6a6a;
+            margin-top: -6px;
+        }
+
+        .noise-types {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .noise-type-button {
+            background: #2d2d2d;
+            border: 1px solid #404040;
+            color: #cccccc;
+            border-radius: 12px;
+            padding: 11px 18px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+        }
+
+        .noise-type-button:hover {
+            background: #3d3d3d;
+            border-color: #505050;
+        }
+
+        .noise-type-button.active {
+            background: #4a90e2;
+            border-color: #5aa0f2;
+            color: white;
+            box-shadow: 0 0 15px rgba(74, 144, 226, 0.2);
+        }
+
+        .toggle {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            user-select: none;
+            font-size: 0.9rem;
+            color: #cfcfcf;
+        }
+
+        .toggle input {
+            width: 0;
+            height: 0;
+            opacity: 0;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 48px;
+            height: 26px;
+            background: #2d2d2d;
+            border-radius: 13px;
+            border: 1px solid rgba(90, 90, 90, 0.5);
+            transition: all 0.2s ease;
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #666;
+            top: 50%;
+            left: 3px;
+            transform: translateY(-50%);
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+        }
+
+        .toggle input:checked + .toggle-switch {
+            background: linear-gradient(135deg, #4a90e2, #5aa0f2);
+            border-color: rgba(90, 140, 220, 0.8);
+        }
+
+        .toggle input:checked + .toggle-switch::after {
+            background: white;
+            transform: translate(22px, -50%);
+        }
+
+        .preset-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 14px;
+        }
+
+        .preset-button {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(90, 90, 90, 0.4);
+            border-radius: 16px;
+            padding: 18px;
+            text-align: left;
+            color: #d0d0d0;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.85rem;
+            line-height: 1.4;
+        }
+
+        .preset-button strong {
+            display: block;
+            font-size: 0.95rem;
+            color: #ffffff;
+            margin-bottom: 6px;
+        }
+
+        .preset-button:hover {
+            border-color: rgba(90, 140, 220, 0.6);
+            box-shadow: 0 10px 25px rgba(74, 144, 226, 0.15);
+            transform: translateY(-1px);
+        }
+
+        @media (max-width: 1024px) {
+            .layout-grid {
+                grid-template-columns: 1fr;
+                gap: 28px;
+                grid-template-areas: 
+                    "playback"
+                    "noise"
+                    "motion"
+                    "timer"
+                    "presets";
+            }
+        }
+
+        .footer {
+            font-size: 0.65rem;
+            color: #555555;
+            text-align: center;
+            margin-top: 32px;
+            padding-top: 24px;
+            border-top: 1px solid rgba(90, 90, 90, 0.2);
+            letter-spacing: 0.02em;
+        }
+
+        .footer a {
+            color: #666666;
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .footer a:hover {
+            color: #777777;
+        }
+
+        @media (max-width: 640px) {
+            .container {
+                padding: 34px 22px 42px;
+                gap: 36px;
+            }
+            .title { font-size: 1.7rem; }
+            .layout-grid { gap: 22px; }
+            .panel { padding: 22px; }
+            .control-row { flex-direction: column; align-items: flex-start; }
+            .noise-types { grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); }
+            .preset-list { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1 class="title">Sleep Sounds Studio</h1>
+            <p class="subtitle">Generative soundscapes for deep rest, focus, and mindful breaks.</p>
+            <p class="description">Blend curated noise colors with motion and tone shaping, schedule fade-outs, and revisit your favourite sessions. Everything runs locally in your browser using the Web Audio API—no downloads required.</p>
+        </header>
+
+        <main class="layout-grid" aria-label="Sound controls">
+            <!-- Playback Panel -->
+            <section class="panel playback-panel" aria-labelledby="playback-heading">
+                <h2 class="section-title" id="playback-heading">Playback</h2>
+                <div class="visualizer" id="visualizer" role="img" aria-label="Sound activity visualizer">
+                    <div class="wave"></div>
+                </div>
+                <button class="play-button" id="playButton">▶ Start Session</button>
+                <div class="status" id="status">Ready</div>
+            </section>
+
+            <!-- Noise Panel -->
+            <section class="panel noise-panel" aria-labelledby="noise-heading">
+                <h2 class="section-title" id="noise-heading">Noise Palette</h2>
+                <p class="control-hint">Choose the foundational texture for your soundscape.</p>
+                <div class="noise-types">
+                    <button class="noise-type-button active" data-type="white">White Noise</button>
+                    <button class="noise-type-button" data-type="pink">Pink Noise</button>
+                    <button class="noise-type-button" data-type="brown">Brown Noise</button>
+                </div>
+
+                <div class="controls-section">
+                    <label class="control-label" for="volumeSlider">Volume <span class="inline-value" id="volumeValue">30%</span></label>
+                    <div class="control-row">
+                        <input type="range" class="slider" id="volumeSlider" min="0" max="100" value="30">
+                    </div>
+                    <span class="control-hint">Tip: Keep volume modest for longer, more comfortable sessions.</span>
+                </div>
+
+                <div class="controls-section">
+                    <label class="control-label" for="toneSlider">Tone Sculpting <span class="inline-value" id="toneValue">Bright</span></label>
+                    <div class="control-row">
+                        <input type="range" class="slider" id="toneSlider" min="400" max="20000" value="20000" step="100">
+                    </div>
+                    <span class="control-hint">Dial left for softer, muffled textures or right for crisp brilliance.</span>
+                </div>
+            </section>
+
+            <!-- Motion Panel -->
+            <section class="panel motion-panel" aria-labelledby="motion-heading">
+                <h2 class="section-title" id="motion-heading">Motion & Space</h2>
+                <label class="control-label" for="panSlider">Stereo Position <span class="inline-value" id="panValue">Centered</span></label>
+                <div class="control-row">
+                    <input type="range" class="slider" id="panSlider" min="-100" max="100" value="0">
+                </div>
+                <label class="toggle">
+                    <input type="checkbox" id="autopanToggle">
+                    <span class="toggle-switch" aria-hidden="true"></span>
+                    <span>Enable gentle autopan drift</span>
+                </label>
+                <span class="control-hint">Autopan adds slow stereo movement for an immersive sensation.</span>
+            </section>
+
+            <!-- Timer Panel -->
+            <section class="panel timer-panel" aria-labelledby="timer-heading">
+                <h2 class="section-title" id="timer-heading">Session Timer</h2>
+                <label class="control-label" for="timerSlider">Auto Fade Out <span class="inline-value" id="timerValue">Off</span></label>
+                <div class="control-row">
+                    <input type="range" class="slider" id="timerSlider" min="0" max="120" step="5" value="0">
+                </div>
+                <span class="control-hint">Set a timer to gently fade the sound and stop playback when you drift off.</span>
+            </section>
+
+            <!-- Presets Panel -->
+            <section class="panel presets-panel" aria-labelledby="presets-heading">
+                <h2 class="section-title" id="presets-heading">Quick Presets</h2>
+                <p class="control-hint">Instantly configure the generator for specific moods.</p>
+                <div class="preset-list">
+                    <button class="preset-button" data-preset="deep-sleep">
+                        <strong>Deep Sleep</strong>
+                        Warm brown noise, soft tone, 45-minute fade, slow autopan.
+                    </button>
+                    <button class="preset-button" data-preset="focus">
+                        <strong>Laser Focus</strong>
+                        Bright pink noise with subtle movement for creative sprints.
+                    </button>
+                    <button class="preset-button" data-preset="rainy-night">
+                        <strong>Rainy Night</strong>
+                        Muted white noise with gentle sway and 30-minute timer.
+                    </button>
+                    <button class="preset-button" data-preset="breath">
+                        <strong>Mindful Breath</strong>
+                        Balanced pink noise, central pan, and short 10-minute fade.
+                    </button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div class="footer">
+        <p>&copy; 2025 Sleep Sounds Studio. All rights reserved. Open source project by <a href="#">Matthew Wesney</a>.</p>
+    </div>
+
+    <script>
+        class NoiseGenerator {
+            constructor() {
+                this.audioContext = null;
+                this.gainNode = null;
+                this.filterNode = null;
+                this.pannerNode = null;
+                this.autopanGain = null;
+                this.autopanLFO = null;
+                this.activeNoiseSource = null;
+                this.noiseType = 'white';
+                this.isPlaying = false;
+                this.volume = 0.3;
+                this.pan = 0;
+                this.autopanEnabled = false;
+                this.timerId = null;
+                this.fadeInterval = null;
+            }
+
+            async init() {
+                try {
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    
+                    this.gainNode = this.audioContext.createGain();
+                    this.gainNode.gain.value = this.volume;
+                    
+                    this.filterNode = this.audioContext.createBiquadFilter();
+                    this.filterNode.type = 'lowpass';
+                    this.filterNode.frequency.value = 20000;
+
+                    this.pannerNode = this.audioContext.createStereoPanner();
+                    this.pannerNode.pan.value = this.pan;
+
+                    this.autopanGain = this.audioContext.createGain();
+                    this.autopanGain.gain.value = 0;
+                    this.autopanGain.connect(this.pannerNode.pan);
+
+                    this.filterNode.connect(this.pannerNode).connect(this.gainNode).connect(this.audioContext.destination);
+
+                    return true;
+                } catch (error) {
+                    console.error('Audio initialization failed:', error);
+                    return false;
+                }
+            }
+
+            createNoiseSource() {
+                const bufferSize = this.audioContext.sampleRate * 2;
+                const buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
+                const data = buffer.getChannelData(0);
+
+                if (this.noiseType === 'white') {
+                    for (let i = 0; i < bufferSize; i++) {
+                        data[i] = Math.random() * 2 - 1;
+                    }
+                } else if (this.noiseType === 'pink') {
+                    let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+                    for (let i = 0; i < bufferSize; i++) {
+                        const white = Math.random() * 2 - 1;
+                        b0 = 0.99886 * b0 + white * 0.0555179;
+                        b1 = 0.99332 * b1 + white * 0.0750759;
+                        b2 = 0.96900 * b2 + white * 0.1538520;
+                        b3 = 0.86650 * b3 + white * 0.3104856;
+                        b4 = 0.55000 * b4 + white * 0.5329522;
+                        b5 = -0.7616 * b5 - white * 0.0168980;
+                        data[i] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362;
+                        data[i] *= 0.11;
+                        b6 = white * 0.115926;
+                    }
+                } else if (this.noiseType === 'brown') {
+                    let lastOut = 0.0;
+                    for (let i = 0; i < bufferSize; i++) {
+                        const white = Math.random() * 2 - 1;
+                        data[i] = (lastOut + (0.02 * white)) / 1.02;
+                        lastOut = data[i];
+                        data[i] *= 3.5;
+                    }
+                }
+
+                const source = this.audioContext.createBufferSource();
+                source.buffer = buffer;
+                source.loop = true;
+                return source;
+            }
+
+            async start() {
+                if (!this.audioContext) {
+                    const initialized = await this.init();
+                    if (!initialized) return false;
+                }
+
+                if (this.audioContext.state === 'suspended') {
+                    await this.audioContext.resume();
+                }
+
+                if (this.activeNoiseSource) {
+                    this.activeNoiseSource.stop();
+                }
+
+                this.activeNoiseSource = this.createNoiseSource();
+                this.activeNoiseSource.connect(this.filterNode);
+                this.activeNoiseSource.start();
+                this.isPlaying = true;
+                if (this.autopanEnabled) {
+                    this.enableAutopan(true);
+                }
+                return true;
+            }
+
+            stop() {
+                if (this.activeNoiseSource) {
+                    this.activeNoiseSource.stop();
+                    this.activeNoiseSource = null;
+                }
+                this.isPlaying = false;
+                this.enableAutopan(false);
+                this.cancelTimer();
+            }
+
+            setVolume(volume) {
+                this.volume = volume;
+                if (this.gainNode) {
+                    this.gainNode.gain.setValueAtTime(volume, this.audioContext.currentTime);
+                }
+            }
+
+            setNoiseType(type) {
+                this.noiseType = type;
+                if (this.isPlaying) {
+                    this.start();
+                }
+            }
+
+            setTone(frequency) {
+                if (this.filterNode) {
+                    this.filterNode.frequency.setValueAtTime(frequency, this.audioContext.currentTime);
+                }
+            }
+
+            setPan(value) {
+                this.pan = value;
+                if (this.pannerNode) {
+                    this.pannerNode.pan.setValueAtTime(value, this.audioContext.currentTime);
+                }
+            }
+
+            enableAutopan(enabled) {
+                this.autopanEnabled = enabled;
+                if (!this.audioContext || !this.autopanGain) return;
+
+                if (enabled && this.isPlaying) {
+                    if (!this.autopanLFO) {
+                        this.autopanLFO = this.audioContext.createOscillator();
+                        this.autopanLFO.type = 'sine';
+                        this.autopanLFO.frequency.value = 0.05;
+                        this.autopanLFO.connect(this.autopanGain);
+                    }
+                    this.autopanGain.gain.setValueAtTime(0.35, this.audioContext.currentTime);
+                    try {
+                        this.autopanLFO.start();
+                    } catch (e) {
+                        // Oscillator already started
+                    }
+                } else if (this.autopanGain) {
+                    this.autopanGain.gain.setTargetAtTime(0, this.audioContext.currentTime, 0.4);
+                }
+            }
+
+            scheduleTimer(minutes) {
+                this.cancelTimer();
+                if (!minutes || minutes <= 0 || !this.audioContext) {
+                    return;
+                }
+
+                const milliseconds = minutes * 60 * 1000;
+                this.timerId = setTimeout(() => {
+                    this.fadeOutAndStop(12);
+                }, milliseconds);
+            }
+
+            cancelTimer() {
+                if (this.timerId) {
+                    clearTimeout(this.timerId);
+                    this.timerId = null;
+                }
+                if (this.fadeInterval) {
+                    clearInterval(this.fadeInterval);
+                    this.fadeInterval = null;
+                }
+            }
+
+            fadeOutAndStop(seconds) {
+                if (!this.isPlaying || !this.gainNode) return;
+
+                const targetVolume = this.volume;
+                const step = targetVolume / (seconds * 20);
+                this.fadeInterval = setInterval(() => {
+                    const current = this.gainNode.gain.value;
+                    const next = Math.max(0, current - step);
+                    this.gainNode.gain.setValueAtTime(next, this.audioContext.currentTime + 0.05);
+                    if (next <= 0.0001) {
+                        clearInterval(this.fadeInterval);
+                        this.fadeInterval = null;
+                        this.stop();
+                    }
+                }, 50);
+            }
+        }
+
+        // App Initialization
+        const noiseGenerator = new NoiseGenerator();
+        const playButton = document.getElementById('playButton');
+        const volumeSlider = document.getElementById('volumeSlider');
+        const volumeValue = document.getElementById('volumeValue');
+        const toneSlider = document.getElementById('toneSlider');
+        const toneValue = document.getElementById('toneValue');
+        const status = document.getElementById('status');
+        const visualizer = document.getElementById('visualizer');
+        const noiseTypeButtons = document.querySelectorAll('.noise-type-button');
+        const panSlider = document.getElementById('panSlider');
+        const panValue = document.getElementById('panValue');
+        const autopanToggle = document.getElementById('autopanToggle');
+        const timerSlider = document.getElementById('timerSlider');
+        const timerValue = document.getElementById('timerValue');
+        const presetButtons = document.querySelectorAll('.preset-button');
+
+        function updateStatus(message, type = '') {
+            status.textContent = message;
+            status.className = `status ${type}`.trim();
+        }
+
+        playButton.addEventListener('click', async () => {
+            if (!noiseGenerator.isPlaying) {
+                const success = await noiseGenerator.start();
+                if (success) {
+                    playButton.textContent = '⏸ Stop Session';
+                    playButton.classList.add('playing');
+                    updateStatus('Playing… relax and breathe.', 'playing');
+                    visualizer.classList.add('active');
+                } else {
+                    updateStatus('Failed to start audio', 'error');
+                }
+            } else {
+                noiseGenerator.stop();
+                playButton.textContent = '▶ Start Session';
+                playButton.classList.remove('playing');
+                updateStatus('Stopped');
+                visualizer.classList.remove('active');
+            }
+        });
+
+        volumeSlider.addEventListener('input', (e) => {
+            const volume = parseInt(e.target.value, 10);
+            volumeValue.textContent = `${volume}%`;
+            noiseGenerator.setVolume(volume / 100);
+        });
+
+        toneSlider.addEventListener('input', (e) => {
+            const freq = parseInt(e.target.value, 10);
+            noiseGenerator.setTone(freq);
+            if (freq > 19000) {
+                toneValue.textContent = 'Bright';
+            } else {
+                toneValue.textContent = `${Math.round(freq / 1000)} kHz`;
+            }
+        });
+
+        panSlider.addEventListener('input', (e) => {
+            const value = parseInt(e.target.value, 10) / 100;
+            noiseGenerator.setPan(value);
+            if (value > 0.05) {
+                panValue.textContent = 'Right';
+            } else if (value < -0.05) {
+                panValue.textContent = 'Left';
+            } else {
+                panValue.textContent = 'Centered';
+            }
+        });
+
+        autopanToggle.addEventListener('change', (e) => {
+            const enabled = e.target.checked;
+            noiseGenerator.enableAutopan(enabled);
+            if (enabled && noiseGenerator.isPlaying) {
+                updateStatus('Playing with gentle autopan enabled.', 'playing');
+            } else if (!enabled && noiseGenerator.isPlaying) {
+                updateStatus('Playing without autopan.', 'playing');
+            }
+        });
+
+        timerSlider.addEventListener('input', (e) => {
+            const minutes = parseInt(e.target.value, 10);
+            if (minutes === 0) {
+                timerValue.textContent = 'Off';
+            } else if (minutes < 60) {
+                timerValue.textContent = `${minutes} min`;
+            } else {
+                const hrs = Math.floor(minutes / 60);
+                const mins = minutes % 60;
+                timerValue.textContent = mins === 0 ? `${hrs} hr` : `${hrs} hr ${mins} min`;
+            }
+            noiseGenerator.scheduleTimer(minutes);
+            if (minutes > 0) {
+                updateStatus(`Timer armed for ${timerValue.textContent.toLowerCase()}.`, 'playing');
+            } else if (noiseGenerator.isPlaying) {
+                updateStatus('Timer disabled. Enjoy continuous playback.', 'playing');
+            }
+        });
+
+        noiseTypeButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                noiseTypeButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                const type = button.dataset.type;
+                noiseGenerator.setNoiseType(type);
+                if (noiseGenerator.isPlaying) {
+                    updateStatus(`Switched to ${type} noise palette.`, 'playing');
+                }
+            });
+        });
+
+        const presets = {
+            'deep-sleep': {
+                type: 'brown',
+                volume: 38,
+                tone: 5600,
+                pan: -6,
+                autopan: true,
+                timer: 45,
+                autopanRate: 0.03
+            },
+            'focus': {
+                type: 'pink',
+                volume: 42,
+                tone: 16500,
+                pan: 12,
+                autopan: false,
+                timer: 0,
+                autopanRate: 0.08
+            },
+            'rainy-night': {
+                type: 'white',
+                volume: 34,
+                tone: 9800,
+                pan: -8,
+                autopan: true,
+                timer: 30,
+                autopanRate: 0.05
+            },
+            'breath': {
+                type: 'pink',
+                volume: 28,
+                tone: 12000,
+                pan: 0,
+                autopan: true,
+                timer: 10,
+                autopanRate: 0.12
+            }
+        };
+
+        function applyPreset(presetKey) {
+            const preset = presets[presetKey];
+            if (!preset) return;
+
+            noiseTypeButtons.forEach(btn => {
+                if (btn.dataset.type === preset.type) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+            noiseGenerator.setNoiseType(preset.type);
+
+            volumeSlider.value = preset.volume;
+            volumeSlider.dispatchEvent(new Event('input'));
+
+            toneSlider.value = preset.tone;
+            toneSlider.dispatchEvent(new Event('input'));
+
+            panSlider.value = preset.pan;
+            panSlider.dispatchEvent(new Event('input'));
+
+            autopanToggle.checked = preset.autopan;
+            noiseGenerator.enableAutopan(preset.autopan);
+            if (noiseGenerator.autopanLFO && noiseGenerator.audioContext && preset.autopanRate) {
+                noiseGenerator.autopanLFO.frequency.setValueAtTime(preset.autopanRate, noiseGenerator.audioContext.currentTime);
+            }
+
+            timerSlider.value = preset.timer;
+            timerSlider.dispatchEvent(new Event('input'));
+
+            updateStatus(`Preset "${presetKey.replace('-', ' ')}" loaded.`, noiseGenerator.isPlaying ? 'playing' : '');
+        }
+
+        presetButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                applyPreset(button.dataset.preset);
+            });
+        });
+
+        // Initialize default values
+        noiseGenerator.setVolume(parseInt(volumeSlider.value, 10) / 100);
+        noiseGenerator.setTone(parseInt(toneSlider.value, 10));
+        noiseGenerator.setPan(parseInt(panSlider.value, 10) / 100);
+    </script>
+</body>
+</html>
